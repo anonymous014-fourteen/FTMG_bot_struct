@@ -1,6 +1,7 @@
 import pandas as pd
 import time
 import requests
+import os
 
 WEBHOOK = os.environ["WEBHOOK"]
 total_start = time.time()
