@@ -1,0 +1,33 @@
+name: Run Script
+
+on:
+  schedule:
+    - cron: "30 18 * * *"   # every 3 hours
+  workflow_dispatch:         # manual run button
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install pandas openpyxl requests
+
+      - name: Run script
+        run: python flashmaker.py
+
+      - name: Commit generated file
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add memory_flash.py
+          git commit -m "update data" || exit 0
+          git push
