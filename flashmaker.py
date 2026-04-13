@@ -1,5 +1,8 @@
 import pandas as pd
 import time
+import requests
+
+WEBHOOK = ""
 total_start = time.time()
 
 class Item:
@@ -92,7 +95,9 @@ with open("memory_flash.py", "w", encoding="utf-8") as f:
             cur_category = item.category
             print("started ", item.category)
     f.write("}\n")
-
+with open("memory_flash.py", "rb") as f:
+    requests.post(WEBHOOK, files={"file": f})
 write_end = time.time()
 print(f"Write time: {write_end - write_start:.2f} seconds")
+
     
