@@ -1,9 +1,12 @@
 name: Run Script
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   schedule:
-    - cron: "30 18 * * *"   # every 3 hours
-  workflow_dispatch:         # manual run button
+    - cron: "30 18 * * *"   # 00:00 IST (midnight)
+  workflow_dispatch:
 
 jobs:
   run:
@@ -25,10 +28,13 @@ jobs:
         run: python flashmaker.py
         env:
           WEBHOOK: ${{ secrets.webhook }}
+
       - name: Commit generated file
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add memory_flash.py
-          git commit -m "update data" || exit 0
+          git diff --quiet && echo "No changes" && exit 0
+          git commit -m "update data"
+          git pull --rebase
           git push
