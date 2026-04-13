@@ -5,7 +5,7 @@ env:
 
 on:
   schedule:
-    - cron: "0 0 * * *"   # 00:00 IST (midnight)
+    - cron: "0 0 * * *" 
   workflow_dispatch:
 
 jobs:
