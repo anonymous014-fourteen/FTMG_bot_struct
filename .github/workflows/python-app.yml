@@ -5,7 +5,7 @@ env:
 
 on:
   schedule:
-    - cron: "0 0 * * *" 
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
 jobs:
@@ -20,6 +20,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -27,6 +28,7 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+
       - name: Install dependencies
         run: pip install -r requirements.txt
 
@@ -35,12 +37,21 @@ jobs:
         env:
           WEBHOOK: ${{ secrets.webhook }}
 
+      - name: Debug output (optional but smart)
+        run: |
+          echo "==== memory_flash.py ===="
+          cat memory_flash.py || echo "file missing"
+
       - name: Commit generated file
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
           git add memory_flash.py
-          git diff --quiet && echo "No changes" && exit 0
-          git commit -m "update data"
+
+          # check staged changes properly
+          git diff --cached --quiet && echo "No changes" && exit 0
+
+          git commit -m "auto: update memory flash"
           git pull --rebase
           git push
