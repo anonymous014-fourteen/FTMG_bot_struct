@@ -2,6 +2,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from memory_flash import items
+import os
+
+TOKEN = os.environ["TOKEN"]
 
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -111,4 +114,4 @@ async def on_ready():
     print(f"Logged in as {bot.user}")
 
 
-bot.run("")
+bot.run(TOKEN)
