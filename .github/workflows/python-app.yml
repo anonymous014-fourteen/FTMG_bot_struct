@@ -1,60 +1,25 @@
-name: update data
+- name: Commit + notify
+  run: |
+    git config user.name "github-actions"
+    git config user.email "github-actions@github.com"
 
-permissions:
-  contents: write
+    git add memory_flash.py
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    if git diff --cached --quiet; then
+      echo "No changes"
 
-on:
-  schedule:
-    - cron: "0 0 * * *"
-  workflow_dispatch:
+      curl -X POST $WEBHOOK \
+      -H "Content-Type: application/json" \
+      -d '{"content": "nothing changed"}'
 
-jobs:
-  run:
-    runs-on: ubuntu-latest
+      exit 0
+    fi
 
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    git commit -m "auto: update memory flash"
+    git push
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run script
-        run: python flashmaker.py
-        env:
-          WEBHOOK: ${{ secrets.webhook }}
-
-      - name: Debug output (optional but smart)
-        run: |
-          echo "==== memory_flash.py ===="
-          cat memory_flash.py || echo "file missing"
-
-      - name: Commit generated file
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
-          git add memory_flash.py
-
-          # check staged changes properly
-          git diff --cached --quiet && echo "No changes" && exit 0
-
-          git commit -m "auto: update memory flash"
-          git pull --rebase
-          git push
+    curl -X POST $WEBHOOK \
+      -F "content=memory updated" \
+      -F "file=@memory_flash.py"
+  env:
+    WEBHOOK: ${{ secrets.webhook }}
