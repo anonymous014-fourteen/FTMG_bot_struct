@@ -82,7 +82,7 @@ lines.append("items = {\n")
 
 cur_category = "empty"
 
-for key in sorted(items.keys()):
+for key, item in items.items():
     item = items[key]
 
     lines.append(f'    "{key}": {{\n')
