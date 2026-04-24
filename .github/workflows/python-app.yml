@@ -32,20 +32,29 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+            
+      - name: Verify password
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          INPUT_PASSWORD: ${{ inputs.password }}
+          EXPECTED_HASH: ${{ secrets.PASSWORD }}
+        run: |
+          python - << 'EOF'
+          import os, hashlib, sys
+
+          inp = os.environ["INPUT_PASSWORD"]
+          expected = os.environ["EXPECTED_HASH"]
+
+          if hashlib.sha256(inp.encode("utf-8")).hexdigest() == expected:
+            print("Auth success, moving forward")
+            sys.exit(0)
+          else:
+            print("Auth fail, access denied")
+            sys.exit(1)
+            EOF
 
       - name: Install dependencies
         run: pip install -r requirements.txt
-
-      - name: Verify password
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          INPUT_HASH=$(printf "%s" "${{ inputs.password }}" | sha256sum | awk '{print $1}')
-          EXPECTED_HASH="${{ secrets.PASSWORD }}"
-
-          if [ "$INPUT_HASH" != "$EXPECTED_HASH" ]; then
-            echo "Wrong password"
-            exit 1
-          fi
 
       - name: Run script (python handles webhook)
         run: python flashmaker.py
