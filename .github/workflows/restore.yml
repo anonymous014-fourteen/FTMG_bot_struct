@@ -7,13 +7,10 @@ on:
   workflow_dispatch:
     inputs:
       password:
-        description: "auth password"
         required: true
-      content:
-        description: "new memory_flash.py content"
+      file:
         required: true
       note:
-        description: "reason for restore"
         required: true
 
 jobs:
@@ -39,18 +36,11 @@ jobs:
               sys.exit(1)
           EOF
 
-      - name: Replace memory flash
+      - name: Decode file
         env:
-          CONTENT: ${{ inputs.content }}
+          FILE_B64: ${{ inputs.file }}
         run: |
-          python - << 'EOF'
-          import os
-
-          content = os.environ["CONTENT"]
-
-          with open("memory_flash.py", "w", encoding="utf-8") as f:
-              f.write(content)
-          EOF
+          echo "$FILE_B64" | base64 -d > memory_flash.py
 
       - name: Commit restore
         run: |
