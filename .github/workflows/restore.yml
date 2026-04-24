@@ -40,10 +40,17 @@ jobs:
           EOF
 
       - name: Replace memory flash
+        env:
+          CONTENT: ${{ inputs.content }}
         run: |
-          cat << 'EOF' > memory_flash.py
-${{ inputs.content }}
-EOF
+          python - << 'EOF'
+          import os
+
+          content = os.environ["CONTENT"]
+
+          with open("memory_flash.py", "w", encoding="utf-8") as f:
+              f.write(content)
+          EOF
 
       - name: Commit restore
         run: |
@@ -53,18 +60,24 @@ EOF
           git add memory_flash.py
 
           if git diff --cached --quiet; then
-            echo "No changes"
             exit 0
           fi
 
           git commit -m "restore: memory flash"
           git push
 
-      - name: Notify webhook
+      - name: Webhook notify
         env:
           NOTE: ${{ inputs.note }}
           WEBHOOK: ${{ secrets.webhook }}
         run: |
-          curl -X POST "$WEBHOOK" \
-            -H "Content-Type: application/json" \
-            -d "{\"content\": \"replaced memory with reason: $NOTE\"}"
+          python - << 'EOF'
+          import os, requests
+
+          note = os.environ["NOTE"]
+          webhook = os.environ["WEBHOOK"]
+
+          requests.post(webhook, json={
+              "content": f"replaced memory with reason : {note}"
+          })
+          EOF
