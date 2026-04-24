@@ -102,7 +102,7 @@ print("Compare + send")
 compare_start = time.time()
 
 FILE = "memory_flash.py"
-
+filename = time.strftime("memory_flash_%Y-%m-%d.b64")
 old_content = ""
 if os.path.exists(FILE):
     with open(FILE, "r", encoding="utf-8") as f:
@@ -125,7 +125,7 @@ else:
     requests.post(
     WEBHOOK,
     data={"content": "flash updated"},
-    files={"file": ("memory_flash.b64", encoded)}
+    files={"file": (filename, encoded)}
     )
 
 compare_end = time.time()
