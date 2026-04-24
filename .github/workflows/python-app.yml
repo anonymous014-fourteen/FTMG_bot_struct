@@ -32,7 +32,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run script
+      - name: Run script (python handles webhook)
         run: python flashmaker.py
         env:
           WEBHOOK: ${{ secrets.webhook }}
@@ -42,25 +42,17 @@ jobs:
           echo "==== memory_flash.py ===="
           cat memory_flash.py || echo "file missing"
 
-      - name: Commit + notify
+      - name: Commit if changed
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
           git add memory_flash.py
+
           if git diff --cached --quiet; then
-            echo "No changes"
-
-            curl -X POST $WEBHOOK \
-            -H "Content-Type: application/json" \
-            -d '{"content": "nothing changed"}'
-          else
-            git commit -m "auto: update memory flash"
-            git push
-
-            curl -X POST $WEBHOOK \
-            -F "content=memory updated" \
-            -F "file=@memory_flash.py"
+            echo "No changes to commit"
+            exit 0
           fi
-        env:
-          WEBHOOK: ${{ secrets.webhook }}
+
+          git commit -m "auto: update memory flash"
+          git push
