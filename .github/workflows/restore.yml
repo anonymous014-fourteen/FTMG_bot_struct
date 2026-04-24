@@ -1,0 +1,70 @@
+name: restore memory flash
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      password:
+        description: "auth password"
+        required: true
+      content:
+        description: "new memory_flash.py content"
+        required: true
+      note:
+        description: "reason for restore"
+        required: true
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Verify password
+        env:
+          INPUT_PASSWORD: ${{ inputs.password }}
+          EXPECTED_HASH: ${{ secrets.PASSWORD }}
+        run: |
+          python - << 'EOF'
+          import os, hashlib, sys
+
+          inp = os.environ["INPUT_PASSWORD"]
+          expected = os.environ["EXPECTED_HASH"]
+
+          if hashlib.sha256(inp.encode("utf-8")).hexdigest() != expected:
+              sys.exit(1)
+          EOF
+
+      - name: Replace memory flash
+        run: |
+          cat << 'EOF' > memory_flash.py
+${{ inputs.content }}
+EOF
+
+      - name: Commit restore
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add memory_flash.py
+
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+
+          git commit -m "restore: memory flash"
+          git push
+
+      - name: Notify webhook
+        env:
+          NOTE: ${{ inputs.note }}
+          WEBHOOK: ${{ secrets.webhook }}
+        run: |
+          curl -X POST "$WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"replaced memory with reason: $NOTE\"}"
