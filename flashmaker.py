@@ -6,6 +6,8 @@ import os
 WEBHOOK = os.environ["WEBHOOK"]
 total_start = time.time()
 
+DEFAULT_DESC = "this is a placeholder description which will be replaced with an actual one, sit tight and wait for the development to be finished"
+
 class Item:
     def __init__(self, name):
         self.name = name
@@ -18,10 +20,6 @@ class Item:
         self.abs_max = 0
         self.description = ""
         self.category = None
-
-    def __repr__(self):
-        return f"{self.name} ({self.category})"
-
 
 items = {}
 
@@ -41,29 +39,34 @@ url = "https://docs.google.com/spreadsheets/d/1rJVbEIDKQUth7xVLxu5s0O_RAInNIfx9r
 
 fields = ["avg_price", "abs_min", "very_low", "low", "high", "very_high", "abs_max"]
 
-print("Read  begin")
+print("Read begin")
 read_start = time.time()
+
 xls = pd.ExcelFile(url)
-
-
-
 
 for sheet_name in CATEGORY_SHEETS:
     df = pd.read_excel(xls, sheet_name=sheet_name, header=1)
-
     df.columns = ["name"] + fields + ["description"]
 
     sheet_data = df.set_index("name").to_dict(orient="index")
 
     for name, values in sheet_data.items():
         key = f"{sheet_name}::{name}"
-
         item = Item(name)
 
         for f in fields:
-            setattr(item, f, values[f])
+            val = values[f]
+            if pd.isna(val):
+                val = 0
+            else:
+                val = float(val)
+            setattr(item, f, val)
 
-        item.description = values["description"]
+        desc = values["description"]
+        if pd.isna(desc) or str(desc).strip() == "":
+            desc = DEFAULT_DESC
+
+        item.description = desc
         item.category = sheet_name
 
         items[key] = item
@@ -71,34 +74,74 @@ for sheet_name in CATEGORY_SHEETS:
 read_end = time.time()
 print(f"Read time: {read_end - read_start:.2f} seconds")
 
-print("write begin")
-write_start = time.time()
+print("Build content")
+build_start = time.time()
+
+lines = []
+lines.append("items = {\n")
+
 cur_category = "empty"
-with open("memory_flash.py", "w", encoding="utf-8") as f:
-    f.write("items = {\n")
 
-    for key, item in items.items():
-        f.write(f'    "{key}": {{\n')
-        f.write(f'        "name": {repr(item.name)},\n')
-        f.write(f'        "avg_price": {item.avg_price},\n')
-        f.write(f'        "abs_min": {item.abs_min},\n')
-        f.write(f'        "very_low": {item.very_low},\n')
-        f.write(f'        "low": {item.low},\n')
-        f.write(f'        "high": {item.high},\n')
-        f.write(f'        "very_high": {item.very_high},\n')
-        f.write(f'        "abs_max": {item.abs_max},\n')
-        f.write(f'        "description": {repr(item.description)},\n')
-        f.write(f'        "category": {repr(item.category)}\n')
-        f.write("    },\n")
-        if item.category != cur_category:
-            if cur_category != "empty":
-                print("finished", cur_category)
-            cur_category = item.category
-            print("started ", item.category)
-    f.write("}\n")
-with open("memory_flash.py", "rb") as f:
-    requests.post(WEBHOOK, files={"file": f})
-write_end = time.time()
-print(f"Write time: {write_end - write_start:.2f} seconds")
+for key in sorted(items.keys()):
+    item = items[key]
 
-    
+    lines.append(f'    "{key}": {{\n')
+    lines.append(f'        "name": {repr(item.name)},\n')
+    lines.append(f'        "avg_price": {item.avg_price},\n')
+    lines.append(f'        "abs_min": {item.abs_min},\n')
+    lines.append(f'        "very_low": {item.very_low},\n')
+    lines.append(f'        "low": {item.low},\n')
+    lines.append(f'        "high": {item.high},\n')
+    lines.append(f'        "very_high": {item.very_high},\n')
+    lines.append(f'        "abs_max": {item.abs_max},\n')
+    lines.append(f'        "description": {repr(item.description)},\n')
+    lines.append(f'        "category": {repr(item.category)}\n')
+    lines.append("    },\n")
+
+    if item.category != cur_category:
+        if cur_category != "empty":
+            print("finished", cur_category)
+        cur_category = item.category
+        print("started ", item.category)
+
+lines.append("}\n")
+
+new_content = "".join(lines)
+
+build_end = time.time()
+print(f"Build time: {build_end - build_start:.2f} seconds")
+
+print("Compare + send")
+compare_start = time.time()
+
+old_content = ""
+FILE = "memory_flash.py"
+
+if os.path.exists(FILE):
+    with open(FILE, "r", encoding="utf-8") as f:
+        old_content = f.read()
+
+if new_content == old_content:
+    print("no change detected")
+
+    requests.post(WEBHOOK, json={
+        "content": "nothing seems to have changed"
+    })
+else:
+    print("change detected, writing + sending")
+
+    with open(FILE, "w", encoding="utf-8") as f:
+        f.write(new_content)
+
+    with open(FILE, "rb") as f:
+        requests.post(
+            WEBHOOK,
+            data={"content": "flash updated"},
+            files={"file": f}
+        )
+
+compare_end = time.time()
+print(f"Compare time: {compare_end - compare_start:.2f} seconds")
+
+total_end = time.time()
+print(f"Total time: {total_end - total_start:.2f} seconds")
