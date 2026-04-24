@@ -122,10 +122,11 @@ else:
 
     encoded = base64.b64encode(new_content.encode("utf-8")).decode("utf-8")
 
-    requests.post(WEBHOOK, json={
-        "content": "flash updated",
-        "base64": encoded
-    })
+    requests.post(
+    WEBHOOK,
+    data={"content": "flash updated"},
+    files={"file": ("memory_flash.b64", encoded)}
+    )
 
 compare_end = time.time()
 print(f"Compare time: {compare_end - compare_start:.2f} seconds")
