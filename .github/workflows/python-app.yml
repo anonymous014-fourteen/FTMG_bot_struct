@@ -40,7 +40,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           INPUT_HASH=$(printf "%s" "${{ inputs.password }}" | sha256sum | awk '{print $1}')
-          EXPECTED_HASH="${{ secrets.UPDATE_PASSWORD_HASH }}"
+          EXPECTED_HASH="${{ secrets.PASSWORD }}"
 
           if [ "$INPUT_HASH" != "$EXPECTED_HASH" ]; then
             echo "Wrong password"
@@ -51,11 +51,6 @@ jobs:
         run: python flashmaker.py
         env:
           WEBHOOK: ${{ secrets.webhook }}
-
-      - name: Debug output
-        run: |
-          echo "==== memory_flash.py ===="
-          cat memory_flash.py || echo "file missing"
 
       - name: Commit if changed
         run: |
