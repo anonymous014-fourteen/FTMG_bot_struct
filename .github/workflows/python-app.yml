@@ -7,6 +7,10 @@ on:
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
+    inputs:
+      password:
+        description: "update password"
+        required: true
 
 jobs:
   run:
@@ -31,6 +35,17 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Verify password
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          INPUT_HASH=$(printf "%s" "${{ inputs.password }}" | sha256sum | awk '{print $1}')
+          EXPECTED_HASH="${{ secrets.UPDATE_PASSWORD_HASH }}"
+
+          if [ "$INPUT_HASH" != "$EXPECTED_HASH" ]; then
+            echo "Wrong password"
+            exit 1
+          fi
 
       - name: Run script (python handles webhook)
         run: python flashmaker.py
