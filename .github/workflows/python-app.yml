@@ -48,22 +48,19 @@ jobs:
           git config user.email "github-actions@github.com"
 
           git add memory_flash.py
-
           if git diff --cached --quiet; then
             echo "No changes"
 
             curl -X POST $WEBHOOK \
             -H "Content-Type: application/json" \
             -d '{"content": "nothing changed"}'
+          else
+            git commit -m "auto: update memory flash"
+            git push
 
-            exit 0
-          fi
-
-          git commit -m "auto: update memory flash"
-          git push
-
-          curl -X POST $WEBHOOK \
+            curl -X POST $WEBHOOK \
             -F "content=memory updated" \
             -F "file=@memory_flash.py"
+          fi
         env:
           WEBHOOK: ${{ secrets.webhook }}
